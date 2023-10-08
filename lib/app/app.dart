@@ -13,17 +13,39 @@ class MyApp extends StatelessWidget {
     const textColor = Color(0xFF4A4A4A);
     const backgroundColor = Color(0xFFF5F5F5);
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Task List',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: primary),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primary,
+          primary: primary,
+        ),
         scaffoldBackgroundColor: backgroundColor,
         textTheme: Theme.of(context).textTheme.apply(
           fontFamily: "Poppins",
           bodyColor: textColor,
           displayColor: textColor,
         ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+            backgroundColor: primary
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.transparent
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w700
+            )
+          )
+        )
       ),
+
       home: SplashPage(),
     );
   }

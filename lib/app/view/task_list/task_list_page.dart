@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_list/app/model/task.dart';
+import 'package:task_list/app/repository/task_repository.dart';
 import 'package:task_list/app/view/components/shape.dart';
 import 'package:task_list/app/view/components/title.dart';
 
@@ -13,56 +15,131 @@ class TaskListPage extends StatefulWidget {
 class _TaskListPageState extends State<TaskListPage> {
   int count = 0;
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
-  }
-
+  final List<Task> taskList = <Task>[];
+  final TaskRepository taskRepository = TaskRepository();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () => _showNewTaskModal(context),
           child: Icon(
               Icons.add,
               size: 50,
           )
       ),
-      body: const Column(
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(),
-          Expanded(child: _taskList())
+          const _Header(),
+          Expanded(
+              child: FutureBuilder<List<Task>>(
+                future: taskRepository.getTasks(),
+                builder: (context, AsyncSnapshot<List<Task>> snapshot) {
+                  if (snapshot == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "No hay tareas",
+                      )
+                    );
+                  }
+                  return _taskList(
+                    snapshot.data!,
+                    onTaskDoneChange: (task) {
+                      task.done = !task.done;
+                      taskRepository.saveTasks(snapshot.data!);
+                      setState(() {});
+                    },
+                  );
+                }
+              )
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNewTaskModal(BuildContext context) {
+    showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => _NewTaskModal(
+          onTaskCreated: (Task task) {
+            taskRepository.addTask(task);
+            setState((){});
+          },
+        )
+    );
+  }
+  
+}
+
+class _NewTaskModal extends StatefulWidget {
+  _NewTaskModal({Key? key, required this.onTaskCreated}) : super(key: key);
+
+  final void Function(Task task) onTaskCreated;
+
+  @override
+  State<_NewTaskModal> createState() => _NewTaskModalState();
+}
+
+class _NewTaskModalState extends State<_NewTaskModal> {
+  final _controllerTask = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(21)),
+        color: Colors.white
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 33, vertical: 23),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          H1("Nueva Tarea"),
+          const SizedBox(height: 26),
+          TextField(
+            controller: _controllerTask,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              hintText: "Descripción de la tarea"
+            ),
+          ),
+          const SizedBox(height: 26),
+          ElevatedButton(
+              onPressed: () {
+                if (_controllerTask.text.isNotEmpty) {
+                  final task = Task(_controllerTask.text);
+                  widget.onTaskCreated(task);
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text("Guardar")
+          )
         ],
       ),
     );
   }
 }
 
-class _taskList extends StatefulWidget {
-  const _taskList({
+class _taskList extends StatelessWidget {
+  const _taskList(this.taskList, {
     super.key,
+    required this.onTaskDoneChange
   });
 
-  @override
-  State<_taskList> createState() => _taskListState();
-}
-
-class _taskListState extends State<_taskList> {
-
-  final taskList = <Task>[
-    Task("Hacer la compra"),
-    Task("Preparar la cena"),
-    Task("Ir al partido de mi hijo"),
-    Task("Mandar un mensaje a mi jefe"),
-  ];
+  final List<Task> taskList;
+  final void Function(Task task) onTaskDoneChange;
 
   @override
   Widget build(BuildContext context) {
@@ -75,11 +152,9 @@ class _taskListState extends State<_taskList> {
           Expanded(
             child: ListView.separated(
                 itemBuilder: (_, index) => _TaskItem(
-                    taskList[index],
-                    onTap: () {
-                      taskList[index].done = !taskList[index].done;
-                      setState(() {});
-                  }),
+                  taskList[index],
+                  onTap: () => onTaskDoneChange(taskList[index])
+                ),
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemCount: taskList.length
             ),
@@ -134,6 +209,7 @@ class _TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return GestureDetector(
       onTap: onTap,
       child: Card(
