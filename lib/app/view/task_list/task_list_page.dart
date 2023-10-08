@@ -4,6 +4,7 @@ import 'package:task_list/app/model/task.dart';
 import 'package:task_list/app/repository/task_repository.dart';
 import 'package:task_list/app/view/components/shape.dart';
 import 'package:task_list/app/view/components/title.dart';
+import 'package:task_list/app/view/home/inherited_widgets.dart';
 
 class TaskListPage extends StatefulWidget {
   const TaskListPage({Key? key}) : super(key: key);
@@ -265,11 +266,14 @@ class _TaskItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       task.subtitle != null ? Text(
+                        style: TextStyle(
+                            color: SpecialColor.of(context).color
+                        ),
                         task.subtitle!,
                       ) : const SizedBox(),
                       task.description != null ? Text(
                         style: TextStyle(
-                          color: Colors.black54
+                          color: SpecialColor.of(context).color
                         ),
                         maxLines: 2,
                         task.description!,

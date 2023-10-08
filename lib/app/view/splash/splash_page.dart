@@ -29,9 +29,6 @@ class SplashPage extends StatelessWidget {
             height: 99,
           ),
           const H1("Lista de Tareas"),
-          Text("Inherited Widget", style: TextStyle(
-            color: SpecialColor.of(context).color
-          ),),
           const SizedBox(
             height: 21,
           ),

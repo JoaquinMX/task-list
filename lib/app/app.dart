@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
     const textColor = Color(0xFF4A4A4A);
     const backgroundColor = Color(0xFFF5F5F5);
     return SpecialColor(
-      color: Colors.redAccent,
+      color: Colors.black26,
       child: MaterialApp(
         title: 'Task List',
         debugShowCheckedModeBanner: false,
