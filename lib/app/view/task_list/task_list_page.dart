@@ -67,11 +67,14 @@ class _TaskListPageState extends State<TaskListPage> {
     showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (_) => _NewTaskModal(
-          onTaskCreated: (Task task) {
-            taskRepository.addTask(task);
-            setState((){});
-          },
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: _NewTaskModal(
+            onTaskCreated: (Task task) {
+              taskRepository.addTask(task);
+              setState((){});
+            },
+          ),
         )
     );
   }
@@ -89,6 +92,8 @@ class _NewTaskModal extends StatefulWidget {
 
 class _NewTaskModalState extends State<_NewTaskModal> {
   final _controllerTask = TextEditingController();
+  final _controllerSubtitle = TextEditingController();
+  final _controllerDescription = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -112,14 +117,38 @@ class _NewTaskModalState extends State<_NewTaskModal> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              hintText: "Descripción de la tarea"
+              hintText: "Título de la tarea"
+            ),
+          ),
+          const SizedBox(height: 26),
+          TextField(
+            controller: _controllerSubtitle,
+            decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                hintText: "Subtítulo de la tarea (opcional)"
+            ),
+          ),
+          const SizedBox(height: 26),
+          TextField(
+            controller: _controllerDescription,
+            decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                hintText: "Descripción de la tarea (opcional)"
             ),
           ),
           const SizedBox(height: 26),
           ElevatedButton(
               onPressed: () {
                 if (_controllerTask.text.isNotEmpty) {
-                  final task = Task(_controllerTask.text);
+                  final task = Task(_controllerTask.text, subtitle: _controllerSubtitle.text, description: _controllerDescription.text);
                   widget.onTaskCreated(task);
                   Navigator.of(context).pop();
                 }
@@ -227,7 +256,27 @@ class _TaskItem extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 10),
-                Text(task.title),
+                Flexible(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      task.subtitle != null ? Text(
+                        task.subtitle!,
+                      ) : const SizedBox(),
+                      task.description != null ? Text(
+                        style: TextStyle(
+                          color: Colors.black54
+                        ),
+                        maxLines: 2,
+                        task.description!,
+                      ) : const SizedBox(),
+                    ],
+                  ),
+                ),
               ],
             ),
           )
