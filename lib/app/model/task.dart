@@ -4,8 +4,8 @@ class Task {
   Task.fromJson(Map<String, dynamic> json) {
     title = json["title"];
     done = json["done"];
-    subtitle = json["subtitle"];
-    description = json["description"];
+    subtitle = json["subtitle"] ?? null;
+    description = json["description"] ?? null;
   }
 
   late final String title;
@@ -17,8 +17,8 @@ class Task {
     return {
       "title": title,
       "done": done,
-      "subtitle": subtitle,
-      "description": description
+      "subtitle": subtitle ?? null,
+      "description": description ?? null
     };
   }
 }

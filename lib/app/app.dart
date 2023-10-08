@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:task_list/app/view/home/inherited_widgets.dart';
+import 'package:task_list/app/view/home/state_page.dart';
 import 'package:task_list/app/view/splash/splash_page.dart';
 
 class MyApp extends StatelessWidget {

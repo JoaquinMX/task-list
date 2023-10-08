@@ -1,65 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:task_list/app/model/task.dart';
-import 'package:task_list/app/repository/task_repository.dart';
 import 'package:task_list/app/view/components/shape.dart';
 import 'package:task_list/app/view/components/title.dart';
 import 'package:task_list/app/view/home/inherited_widgets.dart';
+import 'package:task_list/app/view/task_list/task_provider.dart';
 
-class TaskListPage extends StatefulWidget {
+class TaskListPage extends StatelessWidget {
   const TaskListPage({Key? key}) : super(key: key);
 
   @override
-  State<TaskListPage> createState() => _TaskListPageState();
-}
-
-class _TaskListPageState extends State<TaskListPage> {
-  int count = 0;
-
-  final List<Task> taskList = <Task>[];
-  final TaskRepository taskRepository = TaskRepository();
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-          onPressed: () => _showNewTaskModal(context),
-          child: Icon(
-              Icons.add,
-              size: 50,
-          )
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _Header(),
-          Expanded(
-              child: FutureBuilder<List<Task>>(
-                future: taskRepository.getTasks(),
-                builder: (context, AsyncSnapshot<List<Task>> snapshot) {
-                  if (snapshot == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "No hay tareas",
-                      )
-                    );
-                  }
-                  return _taskList(
-                    snapshot.data!,
-                    onTaskDoneChange: (task) {
-                      task.done = !task.done;
-                      taskRepository.saveTasks(snapshot.data!);
-                      setState(() {});
-                    },
-                  );
-                }
-              )
-          ),
-        ],
+    return ChangeNotifierProvider(
+      create: (_) => TaskProvider()..fetchTasks(),
+      child: Scaffold(
+        floatingActionButton: Builder(
+          builder: (context) {
+            return FloatingActionButton(
+                onPressed: () => _showNewTaskModal(context),
+                child: const Icon(
+                  Icons.add,
+                  size: 50,
+                )
+            );
+          }
+        ),
+        body: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(),
+            Expanded(
+                child: _taskList()
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -68,93 +42,57 @@ class _TaskListPageState extends State<TaskListPage> {
     showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: _NewTaskModal(
-            onTaskCreated: (Task task) {
-              taskRepository.addTask(task);
-              setState((){});
-            },
-          ),
+        builder: (_) => ChangeNotifierProvider.value(
+          value: context.read<TaskProvider>(),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: _NewTaskModal(),
+          )
         )
     );
   }
-  
+
 }
 
-class _NewTaskModal extends StatefulWidget {
-  _NewTaskModal({Key? key, required this.onTaskCreated}) : super(key: key);
-
-  final void Function(Task task) onTaskCreated;
-
-  @override
-  State<_NewTaskModal> createState() => _NewTaskModalState();
-}
-
-class _NewTaskModalState extends State<_NewTaskModal> {
+class _NewTaskModal extends StatelessWidget {
+  _NewTaskModal({Key? key}) : super(key: key);
   final _controllerTask = TextEditingController();
-  final _controllerSubtitle = TextEditingController();
-  final _controllerDescription = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(21)),
-        color: Colors.white
+          borderRadius: BorderRadius.vertical(top: Radius.circular(21)),
+          color: Colors.white
       ),
-      padding: EdgeInsets.symmetric(horizontal: 33, vertical: 23),
+      padding: const EdgeInsets.symmetric(horizontal: 33, vertical: 23),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          H1("Nueva Tarea"),
+          const H1("Nueva Tarea"),
           const SizedBox(height: 26),
           TextField(
             controller: _controllerTask,
             decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              hintText: "Título de la tarea"
-            ),
-          ),
-          const SizedBox(height: 26),
-          TextField(
-            controller: _controllerSubtitle,
-            decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                hintText: "Subtítulo de la tarea (opcional)"
-            ),
-          ),
-          const SizedBox(height: 26),
-          TextField(
-            controller: _controllerDescription,
-            decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                hintText: "Descripción de la tarea (opcional)"
+                hintText: "Título de la tarea"
             ),
           ),
           const SizedBox(height: 26),
           ElevatedButton(
               onPressed: () {
                 if (_controllerTask.text.isNotEmpty) {
-                  final task = Task(_controllerTask.text, subtitle: _controllerSubtitle.text, description: _controllerDescription.text);
-                  widget.onTaskCreated(task);
+                  final task = Task(_controllerTask.text);
+                  context.read<TaskProvider>().addNewTask(task);
                   Navigator.of(context).pop();
                 }
               },
-              child: Text("Guardar")
+              child: const Text("Guardar")
           )
         ],
       ),
@@ -163,13 +101,10 @@ class _NewTaskModalState extends State<_NewTaskModal> {
 }
 
 class _taskList extends StatelessWidget {
-  const _taskList(this.taskList, {
+  const _taskList({
     super.key,
-    required this.onTaskDoneChange
   });
 
-  final List<Task> taskList;
-  final void Function(Task task) onTaskDoneChange;
 
   @override
   Widget build(BuildContext context) {
@@ -180,13 +115,23 @@ class _taskList extends StatelessWidget {
         children: [
           const H1("Tareas"),
           Expanded(
-            child: ListView.separated(
-                itemBuilder: (_, index) => _TaskItem(
-                  taskList[index],
-                  onTap: () => onTaskDoneChange(taskList[index])
-                ),
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
-                itemCount: taskList.length
+            child: Consumer<TaskProvider>(
+              builder: (_, taskProvider, __) {
+                if (taskProvider.taskList.isEmpty) {
+                  return const Center(
+                    child: Text("No hay tareas"),
+                  );
+                } else {
+                  return ListView.separated(
+                      itemBuilder: (_, index) => _TaskItem(
+                          taskProvider.taskList[index],
+                          onTap: () => taskProvider.onTaskDoneChange(taskProvider.taskList[index])
+                      ),
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemCount: taskProvider.taskList.length
+                  );
+                }
+              },
             ),
           ),
         ],
@@ -221,7 +166,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const H1("Completa tus tareas", color: Colors.white),
-              SizedBox(height: 24)
+              const SizedBox(height: 24)
             ],
           ),
         ],
@@ -243,42 +188,24 @@ class _TaskItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(21)
-        ),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(21)
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 21, vertical: 18),
             child: Row(
               children: [
                 Icon(
                   task.done
-                     ? Icons.check_box_rounded
-                    : Icons.check_box_outline_blank,
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 10),
                 Flexible(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      task.subtitle != null ? Text(
-                        style: TextStyle(
-                            color: SpecialColor.of(context).color
-                        ),
-                        task.subtitle!,
-                      ) : const SizedBox(),
-                      task.description != null ? Text(
-                        style: TextStyle(
-                          color: SpecialColor.of(context).color
-                        ),
-                        maxLines: 2,
-                        task.description!,
-                      ) : const SizedBox(),
-                    ],
+                  child: Text(
+                    task.title,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
